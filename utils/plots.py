@@ -52,6 +52,62 @@ def butter_lowpass_filtfilt(data, cutoff=1500, fs=50000, order=5):
 
     b, a = butter_lowpass(cutoff, fs, order=order)
     return filtfilt(b, a, data)  # forward-backward filter
+######################################
+def detect_ellipse(img,BLUR=3):
+    img = img
+
+    img_orig = img.copy()
+
+    h, w, _ = img.shape
+    h3 = int(h / 3.5)
+    w3 = int(w / 3.5)
+    BLACK = (0, 0, 0)
+
+    triangle_cnt1 = np.array([(0, 0), (w3, 0), (0, h3)])  # left up
+    triangle_cnt2 = np.array([(0, h - h3), (0, h), (w3, h)])  # left down
+    triangle_cnt3 = np.array([(w - w3, 0), (w, 0), (w, h3)])  # up right
+    triangle_cnt4 = np.array([(w - w3, h), (w, h), (w, h - h3)])  # up down
+
+    cv2.drawContours(img, [triangle_cnt1], 0, BLACK, -1)
+    cv2.drawContours(img, [triangle_cnt2], 0, BLACK, -1)
+    cv2.drawContours(img, [triangle_cnt3], 0, BLACK, -1)
+    cv2.drawContours(img, [triangle_cnt4], 0, BLACK, -1)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    edges = cv2.Canny(img, 100, 250)
+
+    height, width, _ = img.shape
+    cimg = np.zeros((height, width, 3), dtype='uint8')
+    cnt_image = np.zeros((height, width, 3), dtype='uint8')
+
+    # th, threshed = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
+
+    gray = cv2.medianBlur(gray, BLUR)
+    th, threshed = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
+
+    # cnts, hiers = cv2.findContours(threshed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    cnts, hiers = cv2.findContours(threshed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # cv2.drawContours(cnt_image, cnts, 0, (255, 0, 0))
+
+    cnt_image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+    idx = 0
+    for cnt in cnts:
+        cv2.drawContours(cnt_image, cnts, idx, (255, 0, 0))
+        idx = idx + 1
+        ln = len(cnt)
+        if ln > 40:
+            ellipse = cv2.fitEllipse(cnt)
+            cv2.ellipse(cnt_image, ellipse, (255, 0, 255), 1, cv2.LINE_AA)
+            cv2.ellipse(img_orig, ellipse, (255, 0, 255), 1, cv2.LINE_AA)
+            break
+
+    return img_orig
+
+######################################
 
 
 def plot_one_box(x, img, color=None, label=None, line_thickness=None):
@@ -59,6 +115,16 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=None):
     tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
     color = color or [random.randint(0, 255) for _ in range(3)]
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
+    
+    x1 = int(x[0])
+    y1 = int(x[1])
+    x2 = int(x[2])
+    y2 = int(x[3])
+
+    small_image = img[y1:y2, x1:x2]
+    smi = detect_ellipse(small_image)
+    img[y1:y2, x1:x2] = smi
+    
     cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
     if label:
         tf = max(tl - 1, 1)  # font thickness
