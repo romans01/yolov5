@@ -122,8 +122,8 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=None):
     y2 = int(x[3])
 
     small_image = img[y1:y2, x1:x2]
-    smi = detect_ellipse(small_image)
-    img[y1:y2, x1:x2] = smi
+    #smi = detect_ellipse(small_image)
+    #img[y1:y2, x1:x2] = smi
     
     cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
     if label:
